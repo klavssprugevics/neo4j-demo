@@ -1,0 +1,94 @@
+// Klāvs Spruģevics ks20064
+
+// 1. Atlasa studentus, kuru vid. atzīme priekšmetā ir > n
+// Subject = "Physics"
+// n = 5.5
+
+MATCH (a:Assignment)<--(sub:Subject)<--(st:Student)
+WHERE sub.title = "Physics"
+MATCH (a:Assignment)-->(gr:Grade)<--(st)
+WITH sub, st, avg(gr.value) as st_average
+WHERE st_average > 5.5
+RETURN sub, st, st_average
+ORDER BY st_average
+
+
+// 2. Septīto klašu Studentu vērtējums kontroldarbā 
+// Assignment = "4"
+// Class = "7*"
+
+MATCH (a:Assignment)-->(gr:Grade)<--(s:Student)
+MATCH (sub:Subject)-->(a)
+MATCH (s)-->(c:Class)
+WHERE a.assignment_id = "4" AND c.title STARTS WITH "7"
+RETURN a, gr, s, sub, c
+ORDER BY gr.value DESC
+LIMIT 15
+
+
+// 3. Pasniedzēja visi kursi, kurā mācās vismaz n studenti
+// Teacher = "2"
+// count > 120
+
+// 3.1 Studenti netiek rādīti
+
+MATCH (s:Student)-->(sub:Subject)<--(t:Teacher)
+WHERE t.teacher_id = "2"  
+MATCH (sub)-[r:learns]-(s)
+WITH sub, t, COUNT(r) AS count
+WHERE count > 40
+RETURN sub, count, t
+
+// 3.2 Studenti tiek rādīti
+
+MATCH (s:Student)-->(sub:Subject)<--(t:Teacher)
+WHERE t.teacher_id = "2"  
+MATCH (sub)-[r:learns]-(s)
+WITH sub, t, COUNT(r) AS count
+WHERE count > 120
+MATCH (s:Student)-->(sub)
+RETURN sub, count, t, s
+
+
+// 4. Priekšmetu vidējie vērtējumi.
+// Atlasīti priekšmetu uzdevumu vidējie vērtējumi un aprēķināti priekšmeta vidējā no šī starprezultāta.
+
+MATCH (sub:Subject)-->(a:Assignment)-->(gr:Grade)
+WITH a,sub,  avg(gr.value) as average
+WITH sub, avg(average) as sub_average
+MATCH (sub)-->(aa:Assignment)
+RETURN sub, aa, sub_average
+ORDER BY sub_average
+LIMIT 5
+
+
+// 5. Atlasa konkrētus studentus pēc Class, Subject, un Avg() + SORT() + TOP(3)
+// Class = "10A"
+// Subject = "English"
+// Avg() > 5
+
+MATCH (sub:Subject)<--(s:Student)-->(c:Class)
+WHERE c.title = "10A" AND sub.title = "English"
+MATCH (gr:Grade)<--(s)
+WITH s, sub, c, avg(gr.value) as average
+WHERE average > 5
+RETURN s, sub, c, average
+ORDER BY average DESC
+LIMIT 3
+
+
+
+// ---Query, lai attēlotu rezultātus---
+
+// Atlasa studenta vērtējumu priekšmetā pēc studenta_id
+
+MATCH (a:Assignment)<--(sub:Subject)<--(st:Student)
+WHERE sub.title = "Physics" AND st.student_id = "159"
+MATCH (a:Assignment)-->(gr:Grade)<--(st)
+RETURN st, gr, a
+
+// Parāda atzīmes klasē
+MATCH (sub:Subject)<--(s:Student)-->(c:Class)
+WHERE c.title = "10A" AND sub.title = "English"
+MATCH (gr:Grade)<--(s)
+RETURN s, c, sub, gr

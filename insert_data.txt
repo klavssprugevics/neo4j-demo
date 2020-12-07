@@ -1,0 +1,46 @@
+// Klāvs Spruģevics ks20064
+
+// Ielasa klases
+LOAD CSV WITH HEADERS FROM 'file:///classes.csv' AS row
+MERGE (e:Class {title: row.title, year: date(row.year)})
+
+// Ielasa pasniedzējus
+LOAD CSV WITH HEADERS FROM 'file:///teachers.csv' AS row
+MERGE (e:Teacher {teacher_id: row.teacher_id, name: row.name, surname: row.surname})
+
+// Ielasa priekšmetus
+LOAD CSV WITH HEADERS FROM 'file:///subjects.csv' AS row
+MATCH (t:Teacher) WHERE t.teacher_id = row.teacher_id
+MERGE (e:Subject {title: row.title})
+MERGE (t)-[r:teaches]->(e)
+WITH e, row
+UNWIND split(row.assignment_id, ':') AS id
+MERGE (s:Assignment {assignment_id: id})
+MERGE (e)-[r:consists_of]->(s)
+
+// Ielasa priekšmetu uzdevumus
+LOAD CSV WITH HEADERS FROM 'file:///assignments.csv' AS row
+MATCH (a:Assignment) WHERE a.assignment_id = row.assignment_id
+WITH a, row
+UNWIND split(row.assignment, ':') AS name
+SET a.title = name
+
+// Ielasa studentus
+LOAD CSV WITH HEADERS FROM 'file:///students.csv' AS row
+MERGE (s:Student {student_id: row.student_id, name: row.name, surname: row.surname})
+WITH s, row
+UNWIND split(row.subject, ':') AS subject_name
+MATCH (sub:Subject) WHERE sub.title = subject_name
+MERGE (s)-[r:learns]->(sub)
+
+// Savieno studentus ar klasi
+LOAD CSV WITH HEADERS FROM 'file:///students.csv' AS row
+MATCH (c:Class) WHERE c.title = row.class
+MATCH (s:Student) WHERE s.student_id = row.student_id
+MERGE (s)-[g:member_of]->(c)
+
+// Ielasa studentu vērtējumus uzdevumos
+LOAD CSV WITH HEADERS FROM 'file:///grades.csv' AS row
+MATCH (a:Assignment) WHERE a.assignment_id = row.assignment_id
+MATCH (s:Student) WHERE s.student_id = row.student_id
+MERGE (s)-[r:earned]->(g:Grade {value: toInteger(row.value)})<-[x:evaluated_by]-(a)
